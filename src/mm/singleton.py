@@ -13,7 +13,7 @@ from typing import Optional
 class SingletonLock:
     """Ensures only one instance of the application can run at a time"""
     
-    def __init__(self, app_name: str = "auto_mouse_move"):
+    def __init__(self, app_name: str = "telek"):
         self.app_name = app_name
         self.lock_file: Optional[object] = None
         self.lock_path = self._get_lock_path()
@@ -134,7 +134,7 @@ class SingletonLock:
 class SingletonApp:
     """Application singleton manager with user-friendly messaging"""
     
-    def __init__(self, app_name: str = "auto_mouse_move"):
+    def __init__(self, app_name: str = "telek"):
         self.app_name = app_name
         self.lock = SingletonLock(app_name)
     

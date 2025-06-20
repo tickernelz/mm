@@ -25,7 +25,7 @@ class Logger:
     
     def _setup_logger(self):
         """Setup the logger with appropriate handlers"""
-        self._logger = logging.getLogger("auto_mouse_move")
+        self._logger = logging.getLogger("telek")
         self._logger.setLevel(logging.INFO)
         
         # Prevent duplicate handlers

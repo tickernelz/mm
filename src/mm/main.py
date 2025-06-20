@@ -147,7 +147,7 @@ def main():
     logger.info("Starting Auto Mouse Move application")
     
     # Check for singleton - ensure only one instance runs
-    singleton_app = SingletonApp("auto_mouse_move")
+    singleton_app = SingletonApp("telek")
     if not singleton_app.ensure_single_instance():
         logger.info("Another instance is already running. Exiting.")
         return 1
