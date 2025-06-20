@@ -1,7 +1,31 @@
 [project]
 name = "mm"
 version = "0.1.0"
-description = "Add your description here"
+description = "Auto Mouse Move - Prevents system idle by moving mouse and scrolling"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "PyQt6>=6.6.0",
+    "pyautogui>=0.9.54",
+    "psutil>=5.9.0",
+]
+
+[project.scripts]
+mm = "mm.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pyinstaller]
+name = "MouseMover"
+console = false
+windowed = true
+icon = "src/mm/resources/icon.icns"
+hidden-imports = [
+    "PyQt6.QtCore",
+    "PyQt6.QtWidgets", 
+    "PyQt6.QtGui",
+    "pyautogui",
+    "psutil"
+]
