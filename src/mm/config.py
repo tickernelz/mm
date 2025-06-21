@@ -38,6 +38,7 @@ class ConfigManager(QObject):
             "move_distance": 5,     # pixels
             "scroll_enabled": True,
             "scroll_amount": 3,     # scroll clicks
+            "scroll_pattern": "random",  # random, up, down, left, right
             "enabled": False,       # Start disabled
             "minimize_to_tray": True,
             "start_minimized": False,

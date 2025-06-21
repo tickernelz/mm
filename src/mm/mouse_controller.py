@@ -155,19 +155,44 @@ class MouseController(QObject):
     def _scroll_mouse(self):
         """Scroll mouse wheel"""
         scroll_amount = self.config_manager.get("scroll_amount", 3)
-        
-        # Random scroll direction
-        direction = random.choice([-1, 1])
-        scroll_clicks = direction * scroll_amount
+        scroll_pattern = self.config_manager.get("scroll_pattern", "random")
         
         # Get current mouse position for scrolling
         current_x, current_y = pyautogui.position()
         
-        # Perform scroll
-        pyautogui.scroll(scroll_clicks, x=current_x, y=current_y)
-        
-        direction_text = "up" if scroll_clicks > 0 else "down"
-        self.activity_performed.emit(f"Scrolled {direction_text} ({abs(scroll_clicks)} clicks)")
+        if scroll_pattern == "random":
+            # Random scroll in all directions (up, down, left, right)
+            directions = [
+                ("up", 0, scroll_amount),
+                ("down", 0, -scroll_amount),
+                ("left", -scroll_amount, 0),
+                ("right", scroll_amount, 0)
+            ]
+            direction_name, h_scroll, v_scroll = random.choice(directions)
+            
+            # Perform scroll
+            if h_scroll != 0:
+                pyautogui.hscroll(h_scroll, x=current_x, y=current_y)
+            if v_scroll != 0:
+                pyautogui.scroll(v_scroll, x=current_x, y=current_y)
+                
+            self.activity_performed.emit(f"Scrolled {direction_name} ({scroll_amount} clicks)")
+            
+        elif scroll_pattern == "up":
+            pyautogui.scroll(scroll_amount, x=current_x, y=current_y)
+            self.activity_performed.emit(f"Scrolled up ({scroll_amount} clicks)")
+            
+        elif scroll_pattern == "down":
+            pyautogui.scroll(-scroll_amount, x=current_x, y=current_y)
+            self.activity_performed.emit(f"Scrolled down ({scroll_amount} clicks)")
+            
+        elif scroll_pattern == "left":
+            pyautogui.hscroll(-scroll_amount, x=current_x, y=current_y)
+            self.activity_performed.emit(f"Scrolled left ({scroll_amount} clicks)")
+            
+        elif scroll_pattern == "right":
+            pyautogui.hscroll(scroll_amount, x=current_x, y=current_y)
+            self.activity_performed.emit(f"Scrolled right ({scroll_amount} clicks)")
     
     def _get_random_position(self, current_x: int, current_y: int, distance: int) -> Tuple[int, int]:
         """Get random position within distance"""

@@ -173,10 +173,16 @@ class MainWindow(QMainWindow):
         
         # Scroll amount
         self.scroll_amount_spin = QSpinBox()
-        self.scroll_amount_spin.setRange(1, 10)
+        self.scroll_amount_spin.setRange(1, 200)
         self.scroll_amount_spin.setSuffix(" clicks")
         self.scroll_amount_spin.valueChanged.connect(self.save_settings)
         scroll_layout.addRow("Scroll Amount:", self.scroll_amount_spin)
+        
+        # Scroll pattern
+        self.scroll_pattern_combo = QComboBox()
+        self.scroll_pattern_combo.addItems(["random", "up", "down", "left", "right"])
+        self.scroll_pattern_combo.currentTextChanged.connect(self.save_settings)
+        scroll_layout.addRow("Scroll Pattern:", self.scroll_pattern_combo)
         
         layout.addWidget(scroll_group)
         
@@ -248,6 +254,7 @@ class MainWindow(QMainWindow):
         self.pattern_combo.setCurrentText(config.get("movement_pattern", "random"))
         self.scroll_enabled_checkbox.setChecked(config.get("scroll_enabled", True))
         self.scroll_amount_spin.setValue(config.get("scroll_amount", 3))
+        self.scroll_pattern_combo.setCurrentText(config.get("scroll_pattern", "random"))
         self.check_interval_spin.setValue(config.get("check_interval", 5))
         self.minimize_tray_checkbox.setChecked(config.get("minimize_to_tray", True))
     
@@ -264,6 +271,7 @@ class MainWindow(QMainWindow):
         self.config_manager.set("movement_pattern", self.pattern_combo.currentText())
         self.config_manager.set("scroll_enabled", self.scroll_enabled_checkbox.isChecked())
         self.config_manager.set("scroll_amount", self.scroll_amount_spin.value())
+        self.config_manager.set("scroll_pattern", self.scroll_pattern_combo.currentText())
         self.config_manager.set("check_interval", self.check_interval_spin.value())
         self.config_manager.set("minimize_to_tray", self.minimize_tray_checkbox.isChecked())
     
