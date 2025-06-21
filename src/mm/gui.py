@@ -8,7 +8,9 @@ import sys
 from pathlib import Path
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                             QLabel, QSpinBox, QCheckBox, QPushButton, QGroupBox,
-                            QComboBox, QTextEdit, QTabWidget, QFormLayout)
+                            QComboBox, QTextEdit, QTabWidget, QFormLayout, QListWidget,
+                            QListWidgetItem, QLineEdit, QDoubleSpinBox, QDialog,
+                            QDialogButtonBox, QMessageBox, QSplitter)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
 
@@ -65,6 +67,10 @@ class MainWindow(QMainWindow):
         # Settings tab
         settings_tab = self.create_settings_tab()
         tab_widget.addTab(settings_tab, "Settings")
+        
+        # Keyboard Macros tab
+        macros_tab = self.create_macros_tab()
+        tab_widget.addTab(macros_tab, "Keyboard Macros")
         
         # Log tab
         log_tab = self.create_log_tab()
@@ -221,6 +227,63 @@ class MainWindow(QMainWindow):
         layout.addStretch()
         return widget
     
+    def create_macros_tab(self) -> QWidget:
+        """Create the keyboard macros tab"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # Keyboard macros control group
+        control_group = QGroupBox("Keyboard Macros Control")
+        control_layout = QFormLayout(control_group)
+        
+        # Enable keyboard macros
+        self.macros_enabled_checkbox = QCheckBox()
+        self.macros_enabled_checkbox.stateChanged.connect(self.toggle_macros_enabled)
+        control_layout.addRow("Enable Keyboard Macros:", self.macros_enabled_checkbox)
+        
+        layout.addWidget(control_group)
+        
+        # Macros management group
+        macros_group = QGroupBox("Manage Macros")
+        macros_layout = QVBoxLayout(macros_group)
+        
+        # Buttons row
+        buttons_layout = QHBoxLayout()
+        
+        add_button = QPushButton("Add Macro")
+        add_button.clicked.connect(self.add_macro)
+        buttons_layout.addWidget(add_button)
+        
+        edit_button = QPushButton("Edit Macro")
+        edit_button.clicked.connect(self.edit_macro)
+        buttons_layout.addWidget(edit_button)
+        
+        delete_button = QPushButton("Delete Macro")
+        delete_button.clicked.connect(self.delete_macro)
+        buttons_layout.addWidget(delete_button)
+        
+        test_button = QPushButton("Test Macro")
+        test_button.clicked.connect(self.test_macro)
+        buttons_layout.addWidget(test_button)
+        
+        buttons_layout.addStretch()
+        macros_layout.addLayout(buttons_layout)
+        
+        # Macros list
+        self.macros_list = QListWidget()
+        self.macros_list.itemDoubleClicked.connect(self.edit_macro)
+        macros_layout.addWidget(self.macros_list)
+        
+        layout.addWidget(macros_group)
+        
+        # Load macros
+        self.refresh_macros_list()
+        
+        # Connect macro manager signals
+        self.mouse_controller.keyboard_macro_manager.macros_changed.connect(self.refresh_macros_list)
+        
+        return widget
+    
     def create_log_tab(self) -> QWidget:
         """Create the activity log tab"""
         widget = QWidget()
@@ -356,6 +419,10 @@ class MainWindow(QMainWindow):
     
     def log_activity(self, message: str):
         """Log activity to the log tab"""
+        # Safety check to ensure log_text exists
+        if not hasattr(self, 'log_text') or self.log_text is None:
+            return
+            
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
         self.log_text.append(log_entry)
@@ -378,3 +445,274 @@ class MainWindow(QMainWindow):
             self.hide()
         else:
             event.accept()
+    
+    # Keyboard Macro Management Methods
+    
+    def toggle_macros_enabled(self, state):
+        """Toggle keyboard macros enabled/disabled"""
+        enabled = state == Qt.CheckState.Checked.value
+        self.mouse_controller.keyboard_macro_manager.set_enabled(enabled)
+        self.log_activity(f"Keyboard macros {'enabled' if enabled else 'disabled'}")
+    
+    def refresh_macros_list(self):
+        """Refresh the macros list display"""
+        self.macros_list.clear()
+        
+        # Load current macro enabled state
+        if hasattr(self, 'macros_enabled_checkbox'):
+            self.macros_enabled_checkbox.setChecked(
+                self.mouse_controller.keyboard_macro_manager.is_enabled()
+            )
+        
+        # Get the current palette to determine theme colors
+        palette = self.macros_list.palette()
+        text_color = palette.color(palette.ColorRole.Text)
+        disabled_color = palette.color(palette.ColorRole.PlaceholderText)
+        
+        # If disabled color is too similar to text color, create a more distinct disabled color
+        if disabled_color == text_color or disabled_color.lightnessF() == text_color.lightnessF():
+            # Create a grayed-out version of the text color
+            disabled_color = text_color.darker(150)  # Make it 50% darker
+            if text_color.lightnessF() < 0.5:  # If we're in dark mode
+                disabled_color = text_color.lighter(150)  # Make it 50% lighter instead
+        
+        # Add macros to list
+        macros = self.mouse_controller.keyboard_macro_manager.get_all_macros()
+        for macro in macros:
+            item = QListWidgetItem()
+            
+            # Create display text
+            keys_text = ", ".join(macro.keys) if macro.keys else "No keys"
+            status = "✓" if macro.enabled else "✗"
+            display_text = f"{status} {macro.name} - {keys_text}"
+            if macro.description:
+                display_text += f" ({macro.description})"
+            
+            item.setText(display_text)
+            item.setData(Qt.ItemDataRole.UserRole, macro.name)  # Store macro name
+            
+            # Dynamic color coding based on current theme
+            if macro.enabled:
+                # Use the default text color for enabled macros
+                item.setForeground(text_color)
+            else:
+                # Use a muted color for disabled macros
+                item.setForeground(disabled_color)
+            
+            self.macros_list.addItem(item)
+    
+    def add_macro(self):
+        """Add a new keyboard macro"""
+        dialog = MacroEditDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            macro = dialog.get_macro()
+            if macro:
+                self.mouse_controller.keyboard_macro_manager.add_macro(macro)
+                self.log_activity(f"Added macro: {macro.name}")
+    
+    def edit_macro(self):
+        """Edit the selected macro"""
+        current_item = self.macros_list.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "No Selection", "Please select a macro to edit.")
+            return
+        
+        macro_name = current_item.data(Qt.ItemDataRole.UserRole)
+        macro = self.mouse_controller.keyboard_macro_manager.get_macro(macro_name)
+        
+        if macro:
+            dialog = MacroEditDialog(self, macro)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                updated_macro = dialog.get_macro()
+                if updated_macro:
+                    self.mouse_controller.keyboard_macro_manager.update_macro(macro_name, updated_macro)
+                    self.log_activity(f"Updated macro: {updated_macro.name}")
+    
+    def delete_macro(self):
+        """Delete the selected macro"""
+        current_item = self.macros_list.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "No Selection", "Please select a macro to delete.")
+            return
+        
+        macro_name = current_item.data(Qt.ItemDataRole.UserRole)
+        
+        reply = QMessageBox.question(
+            self, "Confirm Delete", 
+            f"Are you sure you want to delete the macro '{macro_name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.mouse_controller.keyboard_macro_manager.remove_macro(macro_name):
+                self.log_activity(f"Deleted macro: {macro_name}")
+            else:
+                QMessageBox.warning(self, "Error", f"Failed to delete macro '{macro_name}'.")
+    
+    def test_macro(self):
+        """Test the selected macro"""
+        current_item = self.macros_list.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "No Selection", "Please select a macro to test.")
+            return
+        
+        macro_name = current_item.data(Qt.ItemDataRole.UserRole)
+        macro = self.mouse_controller.keyboard_macro_manager.get_macro(macro_name)
+        
+        if macro:
+            # Show warning dialog
+            reply = QMessageBox.question(
+                self, "Test Macro", 
+                f"This will execute the macro '{macro_name}' immediately.\n\n"
+                f"Keys: {', '.join(macro.keys)}\n"
+                f"Description: {macro.description}\n\n"
+                "Are you sure you want to continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                success = self.mouse_controller.keyboard_macro_manager.test_macro(macro)
+                if success:
+                    self.log_activity(f"Tested macro: {macro_name}")
+                else:
+                    QMessageBox.warning(self, "Test Failed", f"Failed to test macro '{macro_name}'.")
+
+
+class MacroEditDialog(QDialog):
+    """Dialog for editing keyboard macros"""
+    
+    def __init__(self, parent=None, macro=None):
+        super().__init__(parent)
+        self.macro = macro
+        self.init_ui()
+        
+        if macro:
+            self.load_macro(macro)
+    
+    def init_ui(self):
+        """Initialize the dialog UI"""
+        self.setWindowTitle("Edit Keyboard Macro" if self.macro else "Add Keyboard Macro")
+        self.setFixedSize(550, 450)  # Increased size for better layout
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)  # Add more spacing between sections
+        
+        # Main form group
+        form_group = QGroupBox("Macro Settings")
+        form_layout = QFormLayout(form_group)
+        form_layout.setVerticalSpacing(10)  # Add spacing between form rows
+        
+        # Name
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("Enter macro name")
+        self.name_edit.setMinimumHeight(30)  # Set minimum height for better visibility
+        form_layout.addRow("Name:", self.name_edit)
+        
+        # Description
+        self.description_edit = QLineEdit()
+        self.description_edit.setPlaceholderText("Enter description (optional)")
+        self.description_edit.setMinimumHeight(30)
+        form_layout.addRow("Description:", self.description_edit)
+        
+        # Keys
+        self.keys_edit = QLineEdit()
+        self.keys_edit.setPlaceholderText("e.g., f5 or ctrl+s or shift+cmd+ctrl+right")
+        self.keys_edit.setMinimumHeight(30)
+        form_layout.addRow("Keys:", self.keys_edit)
+        
+        # Delay
+        self.delay_spin = QDoubleSpinBox()
+        self.delay_spin.setRange(0.0, 5.0)
+        self.delay_spin.setSingleStep(0.1)
+        self.delay_spin.setValue(0.1)
+        self.delay_spin.setSuffix(" seconds")
+        self.delay_spin.setMinimumHeight(30)
+        form_layout.addRow("Delay:", self.delay_spin)
+        
+        # Enabled
+        self.enabled_checkbox = QCheckBox()
+        self.enabled_checkbox.setChecked(True)
+        form_layout.addRow("Enabled:", self.enabled_checkbox)
+        
+        layout.addWidget(form_group)
+        
+        # Help section
+        help_group = QGroupBox("Key Examples & Help")
+        help_layout = QVBoxLayout(help_group)
+        
+        help_text = QLabel(
+            "Key Examples:\n"
+            "• Single keys: f5, space, enter, escape\n"
+            "• Simple combinations: ctrl+s, alt+tab, shift+f10\n"
+            "• Complex combinations: shift+cmd+ctrl+right\n"
+            "• Multiple keys: up,down,left,right (random selection)\n"
+            "• macOS: Use 'cmd' for Command key\n"
+            "• Windows: Use 'win' for Windows key\n"
+            "• Arrow keys: up, down, left, right\n"
+            "• Function keys: f1, f2, f3, etc."
+        )
+        help_text.setStyleSheet("color: gray; font-size: 11px; padding: 5px;")
+        help_text.setWordWrap(True)
+        help_text.setAlignment(Qt.AlignmentFlag.AlignTop)
+        help_layout.addWidget(help_text)
+        
+        layout.addWidget(help_group)
+        
+        # Buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def load_macro(self, macro):
+        """Load macro data into the form"""
+        self.name_edit.setText(macro.name)
+        self.description_edit.setText(macro.description)
+        self.keys_edit.setText(", ".join(macro.keys))
+        self.delay_spin.setValue(macro.delay)
+        self.enabled_checkbox.setChecked(macro.enabled)
+    
+    def get_macro(self):
+        """Get macro from form data"""
+        from mm.keyboard_macro import KeyboardMacro
+        
+        name = self.name_edit.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Invalid Input", "Please enter a macro name.")
+            return None
+        
+        keys_text = self.keys_edit.text().strip()
+        if not keys_text:
+            QMessageBox.warning(self, "Invalid Input", "Please enter at least one key.")
+            return None
+        
+        # Parse keys
+        keys = [key.strip() for key in keys_text.replace(",", " ").split() if key.strip()]
+        if not keys:
+            QMessageBox.warning(self, "Invalid Input", "Please enter valid keys.")
+            return None
+        
+        # Validate keys
+        macro_manager = self.parent().mouse_controller.keyboard_macro_manager
+        for key in keys:
+            if not macro_manager.validate_key_combination(key):
+                QMessageBox.warning(
+                    self, "Invalid Key", 
+                    f"The key combination '{key}' is not valid.\n\n"
+                    "Please use valid key names like:\n"
+                    "• Single keys: f5, space, enter, escape\n"
+                    "• Combinations: ctrl+s, alt+tab\n"
+                    "• Arrow keys: up, down, left, right"
+                )
+                return None
+        
+        description = self.description_edit.text().strip()
+        delay = self.delay_spin.value()
+        enabled = self.enabled_checkbox.isChecked()
+        
+        macro = KeyboardMacro(name, keys, delay, description)
+        macro.enabled = enabled
+        
+        return macro

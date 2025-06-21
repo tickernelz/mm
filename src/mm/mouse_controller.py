@@ -19,6 +19,7 @@ if str(parent_dir) not in sys.path:
 
 from mm.idle_detector import IdleDetector
 from mm.config import ConfigManager
+from mm.keyboard_macro import KeyboardMacroManager
 from mm.logger import logger
 
 
@@ -32,6 +33,7 @@ class MouseController(QObject):
         super().__init__()
         self.config_manager = config_manager
         self.idle_detector = IdleDetector()
+        self.keyboard_macro_manager = KeyboardMacroManager()
         self.system_tray = None
         
         # Set up PyAutoGUI
@@ -52,6 +54,9 @@ class MouseController(QObject):
         
         # Connect to config changes to update timer interval
         self.config_manager.config_changed.connect(self._on_config_changed)
+        
+        # Connect keyboard macro signals
+        self.keyboard_macro_manager.macro_executed.connect(self.activity_performed.emit)
         
     def set_system_tray(self, system_tray):
         """Set reference to system tray for notifications"""
@@ -110,26 +115,42 @@ class MouseController(QObject):
             self.status_changed.emit(f"Error: {str(e)}")
     
     def _perform_activity(self):
-        """Perform mouse activity to prevent idle"""
+        """Perform activity to prevent idle: mouse move -> scroll -> keyboard macros"""
         mouse_enabled = self.config_manager.get("mouse_move_enabled", True)
         scroll_enabled = self.config_manager.get("scroll_enabled", True)
+        keyboard_enabled = self.keyboard_macro_manager.is_enabled()
         
-        if not mouse_enabled and not scroll_enabled:
+        if not mouse_enabled and not scroll_enabled and not keyboard_enabled:
             return
         
         try:
-            # Always perform mouse movement first if enabled
+            # Step 1: Perform mouse movement first if enabled
             if mouse_enabled:
                 self._move_mouse()
                 # Small delay between mouse movement and scroll
                 time.sleep(0.1)
             
-            # Then perform scroll if enabled
+            # Step 2: Then perform scroll if enabled
             if scroll_enabled:
                 self._scroll_mouse()
+                # Small delay between scroll and keyboard macro
+                time.sleep(0.1)
+            
+            # Step 3: Finally execute keyboard macro if enabled
+            if keyboard_enabled:
+                self._execute_keyboard_macro()
                 
         except Exception as e:
             self.activity_performed.emit(f"Error performing activity: {str(e)}")
+    
+    def _execute_keyboard_macro(self):
+        """Execute a random keyboard macro"""
+        try:
+            success = self.keyboard_macro_manager.execute_random_macro()
+            if not success:
+                self.activity_performed.emit("No keyboard macros available to execute")
+        except Exception as e:
+            self.activity_performed.emit(f"Error executing keyboard macro: {str(e)}")
     
     def _move_mouse(self):
         """Move mouse cursor"""
