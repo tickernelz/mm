@@ -23,7 +23,24 @@ A configurable Python application that prevents your system from going idle by a
 
 ## Installation
 
-### Using uv (recommended)
+### Download Pre-built Executables (Recommended)
+
+Download the latest release for your platform from the [Releases page](../../releases/latest):
+
+- **macOS (Intel)**: `telek-macos-x86_64.zip`
+- **macOS (Apple Silicon)**: `telek-macos-arm64.zip` 
+- **Windows (64-bit)**: `telek-windows-x86_64.exe`
+- **Linux (64-bit)**: `telek-linux-x86_64`
+- **Linux (ARM64)**: `telek-linux-arm64`
+
+#### Installation Instructions:
+- **macOS**: Extract the zip file and run the `.app` file
+- **Windows**: Run the `.exe` file directly
+- **Linux**: Make executable (`chmod +x filename`) and run
+
+### From Source
+
+#### Using uv (recommended)
 
 ```bash
 # Clone the repository
@@ -37,7 +54,7 @@ uv sync
 uv run python run.py
 ```
 
-### Using pip
+#### Using pip
 
 ```bash
 # Clone the repository
@@ -53,14 +70,25 @@ python run.py
 
 ## Building Executable
 
-To build a standalone executable using PyInstaller:
+### Automated Builds (GitHub Actions)
+
+This project uses GitHub Actions to automatically build executables for multiple platforms and architectures:
+
+- **Releases**: Push a version tag (e.g., `v1.0.0`) to trigger automatic builds and release creation
+- **Test Builds**: Push to main branch or create PR to test builds without creating releases
+
+See [`.github/workflows/README.md`](.github/workflows/README.md) for detailed information about the build system.
+
+### Manual Build
+
+To build a standalone executable locally using PyInstaller:
 
 ```bash
 # Install build dependencies
 pip install PyInstaller Pillow
 
 # Run the build script
-python build.py
+./build.sh
 ```
 
 The executable will be created in the `dist/` directory.
@@ -176,6 +204,17 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
+
+## Security Notes
+
+### Antivirus False Positives
+PyInstaller executables are sometimes flagged by antivirus software as suspicious. This is a common false positive with packaged Python applications. If you encounter this:
+- The source code is available for review in this repository
+- You can build from source using the instructions above
+- Add an exception for the executable in your antivirus software
+
+### Privacy and Process Spoofing
+The application includes optional process name spoofing to disguise itself as a system process. This is purely for privacy and does not affect functionality. The spoofing can be disabled by removing the `setproctitle` dependency.
 
 ## Disclaimer
 
