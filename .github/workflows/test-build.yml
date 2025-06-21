@@ -20,7 +20,7 @@ jobs:
         include:
           # Test builds for macOS only
           - os: macos
-            runner: macos-latest
+            runner: macos-13
             arch: x86_64
             
           - os: macos

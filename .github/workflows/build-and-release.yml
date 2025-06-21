@@ -19,7 +19,7 @@ jobs:
         include:
           # macOS builds
           - os: macos
-            runner: macos-latest
+            runner: macos-13
             arch: x86_64
             build_cmd: |
               python -m PyInstaller --clean --noconfirm MouseMover.spec

@@ -38,7 +38,7 @@ git push origin v1.0.0
 
 | Platform | Architecture | Runner | Output |
 |----------|-------------|---------|---------|
-| macOS | Intel (x86_64) | `macos-latest` | `telek-macos-x86_64.zip` |
+| macOS | Intel (x86_64) | `macos-13` | `telek-macos-x86_64.zip` |
 | macOS | Apple Silicon (ARM64) | `macos-14` | `telek-macos-arm64.zip` |
 
 ## Features
