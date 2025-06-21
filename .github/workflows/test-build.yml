@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Test builds for different platforms
+          # Test builds for macOS only
           - os: macos
             runner: macos-latest
             arch: x86_64
@@ -26,14 +26,6 @@ jobs:
           - os: macos
             runner: macos-14  # Apple Silicon
             arch: arm64
-            
-          - os: windows
-            runner: windows-latest
-            arch: x86_64
-            
-          - os: linux
-            runner: ubuntu-latest
-            arch: x86_64
 
     steps:
       - name: Checkout code
@@ -57,12 +49,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install PyInstaller
-
-      - name: Install additional dependencies (Linux)
-        if: matrix.os == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
 
       - name: Create resources directory and icon
         run: |
@@ -113,28 +99,13 @@ jobs:
       - name: Verify build output
         run: |
           ls -la dist/
-          if [[ "${{ matrix.os }}" == "macos" ]]; then
-            if [ -d "dist/telek.app" ]; then
-              echo "✅ macOS app bundle created successfully"
-            else
-              echo "❌ macOS app bundle not found"
-              exit 1
-            fi
-          elif [[ "${{ matrix.os }}" == "windows" ]]; then
-            if [ -f "dist/telek.exe" ]; then
-              echo "✅ Windows executable created successfully"
-            else
-              echo "❌ Windows executable not found"
-              exit 1
-            fi
+          if [ -d "dist/telek.app" ]; then
+            echo "✅ macOS app bundle created successfully"
+            echo "App bundle contents:"
+            ls -la dist/telek.app/Contents/MacOS/
           else
-            if [ -f "dist/telek" ]; then
-              echo "✅ Linux executable created successfully"
-              chmod +x dist/telek
-            else
-              echo "❌ Linux executable not found"
-              exit 1
-            fi
+            echo "❌ macOS app bundle not found"
+            exit 1
           fi
 
       - name: Upload build artifacts (for debugging)

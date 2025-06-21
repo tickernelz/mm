@@ -35,9 +35,6 @@ jobs:
             ## Downloads
             - **macOS (Intel)**: Download `telek-macos-x86_64.zip`
             - **macOS (Apple Silicon)**: Download `telek-macos-arm64.zip`
-            - **Windows (64-bit)**: Download `telek-windows-x86_64.exe`
-            - **Linux (64-bit)**: Download `telek-linux-x86_64`
-            - **Linux (ARM64)**: Download `telek-linux-arm64`
 
   build:
     name: Build for ${{ matrix.os }} (${{ matrix.arch }})
@@ -67,65 +64,17 @@ jobs:
             artifact_name: telek-macos-arm64.zip
             artifact_path: dist/telek-macos-arm64.zip
             content_type: application/zip
-            
-          # Windows builds
-          - os: windows
-            runner: windows-latest
-            arch: x86_64
-            build_cmd: |
-              python -m PyInstaller --clean --noconfirm MouseMover.spec
-              move dist\\telek.exe dist\\telek-windows-x86_64.exe
-            artifact_name: telek-windows-x86_64.exe
-            artifact_path: dist/telek-windows-x86_64.exe
-            content_type: application/vnd.microsoft.portable-executable
-            
-          # Linux builds
-          - os: linux
-            runner: ubuntu-latest
-            arch: x86_64
-            build_cmd: |
-              python -m PyInstaller --clean --noconfirm MouseMover.spec
-              mv dist/telek dist/telek-linux-x86_64
-              chmod +x dist/telek-linux-x86_64
-            artifact_name: telek-linux-x86_64
-            artifact_path: dist/telek-linux-x86_64
-            content_type: application/octet-stream
-            
-          - os: linux
-            runner: ubuntu-latest
-            arch: arm64
-            build_cmd: |
-              # Cross-compile for ARM64 using Docker
-              docker run --rm -v "$(pwd)":/workspace -w /workspace \
-                --platform linux/arm64 \
-                python:3.11-slim bash -c "
-                  apt-get update && apt-get install -y gcc g++ && \
-                  pip install --no-cache-dir -r requirements.txt && \
-                  pip install --no-cache-dir PyInstaller && \
-                  python -m PyInstaller --clean --noconfirm MouseMover.spec && \
-                  mv dist/telek dist/telek-linux-arm64 && \
-                  chmod +x dist/telek-linux-arm64
-                "
-            artifact_name: telek-linux-arm64
-            artifact_path: dist/telek-linux-arm64
-            content_type: application/octet-stream
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        if: matrix.os != 'linux' || matrix.arch != 'arm64'
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Set up Docker Buildx (for ARM64 Linux)
-        if: matrix.os == 'linux' && matrix.arch == 'arm64'
-        uses: docker/setup-buildx-action@v3
-
       - name: Cache Python dependencies
-        if: matrix.os != 'linux' || matrix.arch != 'arm64'
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
@@ -134,20 +83,12 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
-        if: matrix.os != 'linux' || matrix.arch != 'arm64'
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install PyInstaller
 
-      - name: Install additional dependencies (Linux)
-        if: matrix.os == 'linux' && matrix.arch != 'arm64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
-
       - name: Create resources directory and icon
-        if: matrix.os != 'linux' || matrix.arch != 'arm64'
         run: |
           mkdir -p src/mm/resources
           python -c "
@@ -189,8 +130,7 @@ jobs:
                   f.write('Icon placeholder')
           "
 
-      - name: Update spec file for cross-platform compatibility
-        if: matrix.os != 'linux' || matrix.arch != 'arm64'
+      - name: Update spec file for macOS
         run: |
           python -c "
           import sys
@@ -198,12 +138,9 @@ jobs:
           
           spec_content = Path('MouseMover.spec').read_text()
           
-          # Update icon path based on platform
-          if sys.platform == 'darwin':
-              if Path('src/mm/resources/icon.icns').exists():
-                  icon_line = 'icon=str(src_dir / \"mm\" / \"resources\" / \"icon.icns\")'
-              else:
-                  icon_line = 'icon=str(src_dir / \"mm\" / \"resources\" / \"icon.png\") if (src_dir / \"mm\" / \"resources\" / \"icon.png\").exists() else None'
+          # Update icon path for macOS
+          if Path('src/mm/resources/icon.icns').exists():
+              icon_line = 'icon=str(src_dir / \"mm\" / \"resources\" / \"icon.icns\")'
           else:
               icon_line = 'icon=str(src_dir / \"mm\" / \"resources\" / \"icon.png\") if (src_dir / \"mm\" / \"resources\" / \"icon.png\").exists() else None'
           
@@ -272,7 +209,7 @@ jobs:
             
             let body = `## Auto Mouse Move - Release ${{ github.ref_name }}
             
-            This release includes executables for multiple platforms and architectures.
+            This release includes macOS executables for both Intel and Apple Silicon architectures.
             
             ### 📥 Downloads
             `;
@@ -287,29 +224,35 @@ jobs:
                 description = '🍎 **macOS (Intel)**';
               } else if (name.includes('macos-arm64')) {
                 description = '🍎 **macOS (Apple Silicon)**';
-              } else if (name.includes('windows')) {
-                description = '🪟 **Windows (64-bit)**';
-              } else if (name.includes('linux-x86_64')) {
-                description = '🐧 **Linux (64-bit)**';
-              } else if (name.includes('linux-arm64')) {
-                description = '🐧 **Linux (ARM64)**';
               }
               
-              body += `- ${description}: [${name}](${downloadUrl})\n`;
+              if (description) {
+                body += `- ${description}: [${name}](${downloadUrl})\n`;
+              }
             }
             
             body += `
             ### 🚀 Features
-            - Prevents system idle by moving mouse cursor
-            - System tray integration
-            - Configurable movement patterns
-            - Cross-platform compatibility
+            - Prevents macOS system idle by moving mouse cursor
+            - System tray integration with native macOS appearance
+            - Configurable movement patterns and idle detection
+            - Optimized for macOS 15+ with proper idle detection
+            - Process name spoofing for privacy
             
             ### 📋 Installation
-            1. Download the appropriate file for your system
-            2. On macOS: Extract the zip and run the .app file
-            3. On Windows: Run the .exe file directly
-            4. On Linux: Make the file executable (\`chmod +x filename\`) and run it
+            1. Download the appropriate file for your Mac:
+               - **Intel Macs**: Download the x86_64 version
+               - **Apple Silicon Macs (M1/M2/M3)**: Download the arm64 version
+            2. Extract the zip file
+            3. Run the .app file
+            4. Grant accessibility permissions when prompted
+            
+            ### 🔒 macOS Permissions
+            The app requires accessibility permissions to function properly:
+            1. Go to System Preferences → Security & Privacy → Privacy
+            2. Select "Accessibility" from the left sidebar
+            3. Click the lock to make changes
+            4. Add the app and ensure it's enabled
             
             ### ⚠️ Security Note
             Some antivirus software may flag PyInstaller executables as suspicious. This is a false positive common with packaged Python applications. The source code is available for review in this repository.

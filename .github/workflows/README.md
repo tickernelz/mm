@@ -10,12 +10,10 @@ This directory contains GitHub Actions workflows for building and releasing the 
 
 **What it does**:
 - Creates a GitHub release
-- Builds the application for multiple platforms and architectures:
+- Builds the application for macOS on both architectures:
   - **macOS**: Intel (x86_64) and Apple Silicon (ARM64)
-  - **Windows**: 64-bit (x86_64)
-  - **Linux**: 64-bit (x86_64) and ARM64
-- Uploads all built executables to the release
-- Updates the release notes with download links and instructions
+- Uploads both macOS executables to the release
+- Updates the release notes with download links and macOS-specific instructions
 
 **Usage**:
 ```bash
@@ -32,7 +30,7 @@ git push origin v1.0.0
 - Manual trigger from GitHub Actions tab
 
 **What it does**:
-- Tests building the application on different platforms
+- Tests building the application on macOS architectures
 - Uploads build artifacts for debugging (retained for 7 days)
 - Helps catch build issues before creating releases
 
@@ -42,20 +40,17 @@ git push origin v1.0.0
 |----------|-------------|---------|---------|
 | macOS | Intel (x86_64) | `macos-latest` | `telek-macos-x86_64.zip` |
 | macOS | Apple Silicon (ARM64) | `macos-14` | `telek-macos-arm64.zip` |
-| Windows | 64-bit (x86_64) | `windows-latest` | `telek-windows-x86_64.exe` |
-| Linux | 64-bit (x86_64) | `ubuntu-latest` | `telek-linux-x86_64` |
-| Linux | ARM64 | `ubuntu-latest` (Docker) | `telek-linux-arm64` |
 
 ## Features
 
 ### Multi-Architecture Support
-- **ARM64**: Native support for Apple Silicon Macs and ARM64 Linux systems
-- **x86_64**: Traditional Intel/AMD 64-bit support
+- **ARM64**: Native support for Apple Silicon Macs (M1/M2/M3)
+- **x86_64**: Traditional Intel Mac support
 
-### Cross-Platform Building
-- Uses native runners for optimal performance
-- Docker-based cross-compilation for Linux ARM64
-- Platform-specific optimizations and packaging
+### Native macOS Building
+- Uses native macOS runners for optimal performance
+- Platform-specific optimizations and app bundle creation
+- Proper ICNS icon generation using macOS tools
 
 ### Automated Release Management
 - Creates GitHub releases automatically

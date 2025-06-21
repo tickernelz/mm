@@ -25,18 +25,18 @@ A configurable Python application that prevents your system from going idle by a
 
 ### Download Pre-built Executables (Recommended)
 
-Download the latest release for your platform from the [Releases page](../../releases/latest):
+Download the latest release for your Mac from the [Releases page](../../releases/latest):
 
 - **macOS (Intel)**: `telek-macos-x86_64.zip`
 - **macOS (Apple Silicon)**: `telek-macos-arm64.zip` 
-- **Windows (64-bit)**: `telek-windows-x86_64.exe`
-- **Linux (64-bit)**: `telek-linux-x86_64`
-- **Linux (ARM64)**: `telek-linux-arm64`
 
 #### Installation Instructions:
-- **macOS**: Extract the zip file and run the `.app` file
-- **Windows**: Run the `.exe` file directly
-- **Linux**: Make executable (`chmod +x filename`) and run
+1. Download the appropriate file for your Mac:
+   - **Intel Macs**: Download the x86_64 version
+   - **Apple Silicon Macs (M1/M2/M3)**: Download the arm64 version
+2. Extract the zip file
+3. Run the .app file
+4. Grant accessibility permissions when prompted
 
 ### From Source
 
